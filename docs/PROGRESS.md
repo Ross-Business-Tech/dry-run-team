@@ -19,5 +19,9 @@ All plan recommendations approved: Vite + React + Tailwind v4, TypeScript, built
 
 ## Lessons / bugs
 
+- Tests missed this; guard-removal caught it: the "never release a draft" test used a draft with no answer, so deleting the status check left it green. Approve, then send back to draft, keeps the answer, which would have allowed releasing a draft. Added a test for that exact path, and for releasing twice.
+- The team smoke script (`scripts/smoke-test.cjs`, staff-owned) reports SKIPPED here: it needs Chromium headless shell build 1248, but the sandbox has 1243. The Playwright suite runs the same checks (console errors, phone + desktop screenshots) against the build instead.
+- Desktop queue tabs overflowed and cut off the last tab; found in a screenshot. Fixed by letting the tabs wrap.
+
 - oxlint ignored `react/no-danger` until the `react` plugin was listed in `plugins`; it exited 0 on a file using `dangerouslySetInnerHTML`. Found by writing a deliberately bad file. Fixed by enabling the plugin and re-checking that the rule fails the same file.
 - Prettier reformatted the team's staff-owned docs (`START-HERE.md`, `PROMPTS.md`). Reverted them and added them to `.prettierignore`.
