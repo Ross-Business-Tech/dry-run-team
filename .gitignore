@@ -34,3 +34,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# --- HR helpdesk prototype ---
+/notes/
+/coverage/
+/test-results/
+/playwright-report/

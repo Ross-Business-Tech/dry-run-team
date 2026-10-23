@@ -1,0 +1,15 @@
+dist
+node_modules
+smoke-results
+scripts
+.github
+.claude
+admin
+package-lock.json
+test-results
+playwright-report
+coverage
+CLAUDE.md
+START-HERE.md
+PROMPTS.md
+README.md
