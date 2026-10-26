@@ -7,6 +7,8 @@ import type { RiskAssessment } from './risk'
 
 export type Role = 'employee' | 'reviewer'
 export type Status = 'draft' | 'approved' | 'rejected' | 'released'
+/** Who wrote the text the reviewer started from, kept for audit. */
+export type DraftedBy = 'built-in' | 'gemini'
 
 export interface Source {
   policyId: string
@@ -29,6 +31,8 @@ export interface Ticket {
   draft: string
   /** What the reviewer approved; the only text an employee can ever see. */
   finalAnswer?: string
+  /** Where the approved answer's starting draft came from. */
+  draftedBy?: DraftedBy
   reviewerNote?: string
   approvedAt?: string
   releasedAt?: string
@@ -41,7 +45,13 @@ const NOT_REVIEWER = 'Only an HR reviewer can do this.'
 
 export function approve(
   t: Ticket,
-  opts: { role: Role; finalAnswer: string; highRiskConfirmed?: boolean; now: string },
+  opts: {
+    role: Role
+    finalAnswer: string
+    highRiskConfirmed?: boolean
+    draftedBy?: DraftedBy
+    now: string
+  },
 ): Result {
   if (opts.role !== 'reviewer') return fail(NOT_REVIEWER)
   if (t.status !== 'draft') return fail('Only a draft can be approved.')
@@ -55,7 +65,13 @@ export function approve(
   }
   return {
     ok: true,
-    ticket: { ...t, status: 'approved', finalAnswer: answer, approvedAt: opts.now },
+    ticket: {
+      ...t,
+      status: 'approved',
+      finalAnswer: answer,
+      draftedBy: opts.draftedBy ?? 'built-in',
+      approvedAt: opts.now,
+    },
   }
 }
 

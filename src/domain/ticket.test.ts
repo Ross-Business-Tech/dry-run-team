@@ -78,6 +78,18 @@ describe('approve', () => {
     expect(withIt.ok).toBe(true)
   })
 
+  it('records where the draft came from, defaulting to the built-in drafter', () => {
+    const plain = approve(ticket(), { role: 'reviewer', finalAnswer: 'A', now: NOW })
+    expect(plain.ok && plain.ticket.draftedBy).toBe('built-in')
+    const ai = approve(ticket(), {
+      role: 'reviewer',
+      finalAnswer: 'A',
+      draftedBy: 'gemini',
+      now: NOW,
+    })
+    expect(ai.ok && ai.ticket.draftedBy).toBe('gemini')
+  })
+
   it('does not mutate the input ticket', () => {
     const t = ticket()
     approve(t, { role: 'reviewer', finalAnswer: 'Answer', now: NOW })

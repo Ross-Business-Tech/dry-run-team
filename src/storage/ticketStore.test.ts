@@ -52,6 +52,11 @@ describe('ticket store', () => {
     expect(r.saved.tickets).toEqual([seed[1]])
   })
 
+  it('rejects an unknown draftedBy value but keeps a valid one', () => {
+    expect(isTicket({ ...seed[0], draftedBy: 'gemini' })).toBe(true)
+    expect(isTicket({ ...seed[0], draftedBy: 'someone-else' })).toBe(false)
+  })
+
   it('returns false when the browser refuses to save', () => {
     const store: KeyValueStore = {
       getItem: () => null,
