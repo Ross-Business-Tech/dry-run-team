@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { LIMITS } from '../config/limits'
-import { approve, reject, release, returnToDraft, type Ticket } from '../domain/ticket'
+import {
+  approve,
+  reject,
+  release,
+  returnToDraft,
+  type DraftedBy,
+  type Ticket,
+} from '../domain/ticket'
+import { draftWithGemini } from '../services/geminiClient'
 import { dateTime } from './format'
 import { Badge } from './ReviewQueue'
 
@@ -15,6 +23,35 @@ export default function TicketDetail(props: {
   const [rejecting, setRejecting] = useState(false)
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [draftedBy, setDraftedBy] = useState<DraftedBy>('built-in')
+  // The last machine-written text, to tell whether the reviewer has edited it since.
+  const [lastDraft, setLastDraft] = useState(t.draft)
+  const [gemini, setGemini] = useState<{ busy: boolean; note: string | null; lastAt: number }>({
+    busy: false,
+    note: null,
+    lastAt: 0,
+  })
+
+  async function askGemini() {
+    if (gemini.busy) return
+    const wait = gemini.lastAt + LIMITS.GEMINI_COOLDOWN_MS - Date.now()
+    if (wait > 0) {
+      return setGemini((g) => ({ ...g, note: 'Please wait a moment before regenerating.' }))
+    }
+    if (answer !== lastDraft && !window.confirm('Replace your edits with a new Gemini draft?'))
+      return
+    setGemini({ busy: true, note: null, lastAt: Date.now() })
+    const r = await draftWithGemini(t.question, t.sources)
+    if (r.ok) {
+      setAnswer(r.text)
+      setLastDraft(r.text)
+      setDraftedBy('gemini')
+      const note = r.truncated ? 'The draft was too long and has been shortened.' : null
+      setGemini((g) => ({ ...g, busy: false, note }))
+    } else {
+      setGemini((g) => ({ ...g, busy: false, note: r.error }))
+    }
+  }
   const now = () => new Date().toISOString()
   const by = { role: 'reviewer' as const }
 
@@ -79,9 +116,35 @@ export default function TicketDetail(props: {
 
       {t.status === 'draft' && (
         <section className="space-y-3">
-          <label htmlFor="answer" className="block text-sm font-semibold">
-            Answer to the employee <span className="font-normal text-stone-500">(edit freely)</span>
-          </label>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <label htmlFor="answer" className="block text-sm font-semibold">
+              Answer to the employee{' '}
+              <span className="font-normal text-stone-500">(edit freely)</span>
+            </label>
+            <button
+              type="button"
+              onClick={askGemini}
+              disabled={gemini.busy || t.sources.length === 0}
+              title={t.sources.length === 0 ? 'No policy to draft from' : undefined}
+              className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-brand-700 ring-1 ring-brand-600 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {gemini.busy
+                ? 'Gemini is writing…'
+                : draftedBy === 'gemini'
+                  ? '↻ Regenerate with Gemini'
+                  : '✨ Draft with Gemini'}
+            </button>
+          </div>
+          <p className="text-xs text-stone-500" aria-live="polite">
+            {draftedBy === 'gemini'
+              ? 'Drafted by Gemini from the policy sources above. Check every fact before approving.'
+              : 'Drafted from the policy text by the built-in drafter.'}
+          </p>
+          {gemini.note && (
+            <p role="alert" className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+              {gemini.note}
+            </p>
+          )}
           <textarea
             id="answer"
             value={answer}
@@ -114,6 +177,7 @@ export default function TicketDetail(props: {
                     ...by,
                     finalAnswer: answer,
                     highRiskConfirmed: confirmed,
+                    draftedBy,
                     now: now(),
                   }),
                   'Approved. It will go out with the next release.',
@@ -135,7 +199,10 @@ export default function TicketDetail(props: {
 
       {t.status === 'approved' && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Approved answer (not yet released)</h2>
+          <h2 className="text-sm font-semibold">
+            Approved answer (not yet released)
+            <DraftedLabel by={t.draftedBy} />
+          </h2>
           <p className="rounded-xl bg-white p-3 text-[15px] whitespace-pre-line ring-1 ring-stone-200">
             {t.finalAnswer}
           </p>
@@ -196,6 +263,7 @@ export default function TicketDetail(props: {
         <section>
           <h2 className="text-sm font-semibold">
             Sent to the employee {t.releasedAt && `· ${dateTime(t.releasedAt)}`}
+            <DraftedLabel by={t.draftedBy} />
           </h2>
           <p className="mt-2 rounded-xl bg-white p-3 text-[15px] whitespace-pre-line ring-1 ring-stone-200">
             {t.finalAnswer}
@@ -213,4 +281,9 @@ export default function TicketDetail(props: {
       )}
     </article>
   )
+}
+
+function DraftedLabel({ by }: { by: DraftedBy | undefined }) {
+  if (by !== 'gemini') return null
+  return <span className="ml-2 font-normal text-stone-500">· first draft by Gemini</span>
 }

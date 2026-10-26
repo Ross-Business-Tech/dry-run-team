@@ -1,0 +1,11 @@
+{
+  "proxies": {
+    "/api/gemini": {
+      "upstream": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+      "method": "POST",
+      "headers": {
+        "x-goog-api-key": "${GEMINI_API_KEY}"
+      }
+    }
+  }
+}

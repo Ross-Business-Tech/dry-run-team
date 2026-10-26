@@ -16,7 +16,18 @@ export const LIMITS = {
   SUBMIT_COOLDOWN_MS: 5000,
   /** Drafts padded with weak matches. */
   TOP_K_PASSAGES: 3,
+  /** A hung Gemini call leaving the reviewer staring at a spinner. */
+  GEMINI_TIMEOUT_MS: 30_000,
+  /** Runaway output cost; leaves headroom for models that spend tokens on reasoning. */
+  GEMINI_MAX_OUTPUT_TOKENS: 2048,
+  /** A reviewer hammering Regenerate (here.now also caps the route at 100 calls/hour/IP). */
+  GEMINI_COOLDOWN_MS: 3000,
+  /** A huge or hostile response body exhausting browser memory. */
+  GEMINI_MAX_RESPONSE_BYTES: 200_000,
 } as const
+
+/** Same-origin path of the here.now proxy route declared in public/.herenow/proxy.json. */
+export const GEMINI_ROUTE = '/api/gemini'
 
 /** Times of day (24h, local) HR releases approved answers; shown to employees. */
 export const RELEASE_WINDOWS = ['10:00', '16:00'] as const

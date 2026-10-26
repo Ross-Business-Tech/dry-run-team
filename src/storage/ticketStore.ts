@@ -45,6 +45,7 @@ export function isTicket(v: unknown): v is Ticket {
     isStr(t.draft) &&
     t.draft.length <= LIMITS.MAX_DRAFT_CHARS &&
     isOptStr(t.finalAnswer) &&
+    (t.draftedBy === undefined || t.draftedBy === 'built-in' || t.draftedBy === 'gemini') &&
     isOptStr(t.reviewerNote) &&
     isOptStr(t.approvedAt) &&
     isOptStr(t.releasedAt)
