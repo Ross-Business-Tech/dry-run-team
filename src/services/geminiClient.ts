@@ -33,6 +33,13 @@ export async function draftWithGemini(
     if (res.status === 429) {
       return { ok: false, error: 'Too many Gemini requests. Wait a minute and try again.' }
     }
+    // 5xx means Google or the relay is overloaded or down, not that the key is wrong.
+    if (res.status >= 500) {
+      return {
+        ok: false,
+        error: 'Gemini is busy right now. Wait a minute and try again, or edit the draft yourself.',
+      }
+    }
     if (!res.ok) {
       // The body is deliberately not shown: upstream errors can echo request details.
       return {
