@@ -64,6 +64,28 @@ describe('draftWithGemini', () => {
     })
   })
 
+  // Seen live on 2026-10-28: Google answered 503 UNAVAILABLE ("high demand") with a valid key,
+  // and the app wrongly told the reviewer to get the key checked.
+  it.each([500, 502, 503, 504])(
+    'says Gemini is busy, not that the key is wrong, on %i',
+    async (status) => {
+      const body =
+        '{"error":{"code":503,"message":"This model is currently experiencing high demand.","status":"UNAVAILABLE"}}'
+      const r = await draftWithGemini('q', sources, {
+        fetchFn: async () => reply(body, { status }),
+      })
+      expect(r).toEqual({
+        ok: false,
+        error: 'Gemini is busy right now. Wait a minute and try again, or edit the draft yourself.',
+      })
+    },
+  )
+
+  it.each([400, 401, 403])('still points to the key on %i', async (status) => {
+    const r = await draftWithGemini('q', sources, { fetchFn: async () => reply('{}', { status }) })
+    expect(!r.ok && r.error).toMatch(/check the key/)
+  })
+
   it('reports a bad key or upstream error without leaking the body', async () => {
     const r = await draftWithGemini('q', sources, {
       fetchFn: async () =>
